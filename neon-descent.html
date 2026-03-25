@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEON DESCENT</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Courier+Prime:wght@400;700&display=swap');
+:root{
+  --bg:#000005; --s:#08080f; --panel:#0a0a18;
+  --c1:#ff2d6b; --c2:#00e5ff; --c3:#ffe500; --c4:#7c3aed;
+  --g:#00ff88; --r:#ff2244; --txt:#dde8ff; --dim:#2a3050;
+  --fd:'Black Ops One',cursive; --fm:'Courier Prime',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:var(--fm);color:var(--txt)}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:var(--c4)}
+
+/* CANVAS */
+#c{position:fixed;inset:0;z-index:0}
+
+/* OVERLAY LAYER */
+#ui{position:fixed;inset:0;z-index:10;pointer-events:none}
+#ui>*{pointer-events:auto}
+
+/* ── HUD ── */
+#hud{position:fixed;top:0;left:0;right:0;display:none;padding:10px 16px;background:linear-gradient(180deg,rgba(0,0,5,.85) 0%,transparent 100%);align-items:center;gap:20px}
+#hud.on{display:flex}
+.hud-item{display:flex;flex-direction:column;align-items:center;gap:1px}
+.hud-lbl{font-size:7px;letter-spacing:3px;color:var(--dim);text-transform:uppercase}
+.hud-val{font-family:var(--fd);font-size:20px;color:var(--c2);letter-spacing:1px;text-shadow:0 0 10px var(--c2);min-width:60px;text-align:center}
+.hud-val.hot{color:var(--c3);text-shadow:0 0 10px var(--c3)}
+.hud-val.danger{color:var(--r);text-shadow:0 0 10px var(--r)}
+#hud-depth{font-size:11px;color:var(--dim);font-family:var(--fd);margin-left:auto;letter-spacing:2px}
+
+/* live lb */
+#live-lb{position:fixed;right:10px;top:60px;width:140px;background:rgba(8,8,15,.8);border:1px solid rgba(0,229,255,.15);border-radius:6px;padding:8px;display:none}
+#live-lb.on{display:block}
+.llb-title{font-size:7px;letter-spacing:3px;color:var(--c3);margin-bottom:6px;text-align:center}
+.llb-row{display:flex;align-items:center;gap:5px;padding:3px 0;border-bottom:1px solid rgba(42,48,80,.5);font-size:9px}
+.llb-row:last-child{border-bottom:none}
+.llb-r{width:14px;color:var(--dim);flex-shrink:0;text-align:center}
+.llb-n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.llb-n.me{color:var(--c2)}
+.llb-s{font-family:var(--fd);font-size:8px;color:var(--g);flex-shrink:0}
+
+/* mobile */
+#mobile-btns{position:fixed;bottom:20px;left:0;right:0;display:none;justify-content:center;gap:20px;z-index:20}
+@media(max-width:600px){#mobile-btns{display:flex}#live-lb{display:none!important}}
+.m-btn{width:80px;height:60px;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.m-btn:active{background:rgba(0,229,255,.18)}
+
+/* ── SCREENS ── */
+.screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;overflow-y:auto;z-index:30;background:rgba(0,0,5,.92);backdrop-filter:blur(6px)}
+.screen.on{display:flex}
+
+/* TITLE */
+#s-title{text-align:center}
+.game-title{font-family:var(--fd);font-size:clamp(44px,10vw,90px);background:linear-gradient(135deg,var(--c1),var(--c2),var(--c3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:4px;animation:titlePulse 3s ease-in-out infinite;line-height:1}
+@keyframes titlePulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.3)}}
+.game-sub{font-size:11px;letter-spacing:6px;color:var(--c4);margin-top:4px;text-transform:uppercase}
+.tag-input{width:100%;max-width:320px;background:var(--panel);border:1px solid rgba(0,229,255,.3);border-radius:4px;padding:13px 16px;font-family:var(--fd);font-size:18px;color:var(--c2);text-align:center;letter-spacing:3px;outline:none;transition:border-color .2s,box-shadow .2s;text-transform:uppercase;caret-color:var(--c2)}
+.tag-input:focus{border-color:var(--c2);box-shadow:0 0 20px rgba(0,229,255,.2)}
+.tag-input::placeholder{color:var(--dim);font-size:12px;letter-spacing:2px}
+.btn-primary{width:100%;max-width:320px;padding:15px;background:transparent;border:2px solid var(--c1);border-radius:4px;font-family:var(--fd);font-size:14px;letter-spacing:4px;color:var(--c1);cursor:pointer;text-transform:uppercase;position:relative;overflow:hidden;transition:all .2s}
+.btn-primary::before{content:'';position:absolute;inset:0;background:var(--c1);transform:scaleX(0);transform-origin:left;transition:transform .2s;z-index:0}
+.btn-primary:hover::before{transform:scaleX(1)}
+.btn-primary:hover{color:var(--bg)}
+.btn-primary span{position:relative;z-index:1}
+.controls-hint{font-size:9px;color:var(--dim);letter-spacing:2px;text-align:center;line-height:2.2}
+.controls-hint b{color:var(--txt)}
+
+/* TABS */
+.tabs{display:flex;border:1px solid var(--dim);border-radius:4px;overflow:hidden;width:100%;max-width:360px}
+.tab{flex:1;padding:9px 0;text-align:center;font-size:9px;letter-spacing:2px;color:var(--dim);cursor:pointer;background:var(--s);transition:all .15s;border-right:1px solid var(--dim)}
+.tab:last-child{border-right:none}
+.tab.on{background:var(--panel);color:var(--c2)}
+.tab-panel{display:none;width:100%;max-width:360px}
+.tab-panel.on{display:block}
+
+/* LB */
+.lb-box{background:var(--panel);border:1px solid rgba(0,229,255,.12);border-radius:6px;overflow:hidden;width:100%}
+.lb-hdr{padding:10px 16px;background:var(--s);border-bottom:1px solid rgba(0,229,255,.1);display:flex;align-items:center;gap:8px}
+.lb-dot{width:6px;height:6px;border-radius:50%;background:var(--c3);box-shadow:0 0 6px var(--c3);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.lb-title-txt{font-family:var(--fd);font-size:10px;letter-spacing:3px;color:var(--c3)}
+#lb-status{margin-left:auto;font-size:8px;color:var(--dim)}
+.lb-list{padding:4px 0;min-height:160px}
+.lb-row{display:flex;align-items:center;padding:8px 16px;gap:12px;border-bottom:1px solid rgba(42,48,80,.4)}
+.lb-row:last-child{border-bottom:none}
+.lb-rank{font-family:var(--fd);font-size:11px;width:22px;text-align:center;flex-shrink:0}
+.lb-rank.r1{color:var(--c3);text-shadow:0 0 8px var(--c3)}
+.lb-rank.r2{color:#aaa}
+.lb-rank.r3{color:#cd7f32}
+.lb-rank.rn{color:var(--dim)}
+.lb-name{flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-name.me{color:var(--c2);text-shadow:0 0 6px rgba(0,229,255,.4)}
+.lb-score-txt{font-family:var(--fd);font-size:11px;color:var(--g)}
+.lb-empty{padding:32px;text-align:center;font-size:10px;color:var(--dim);letter-spacing:2px}
+
+/* SHOP */
+.shop-bar{display:flex;align-items:center;gap:8px;width:100%}
+.shop-back{background:transparent;border:1px solid var(--dim);border-radius:3px;padding:5px 10px;font-size:9px;color:var(--dim);cursor:pointer;letter-spacing:1px;transition:all .15s}
+.shop-back:hover{border-color:var(--c2);color:var(--c2)}
+.shop-wallet{flex:1;text-align:right;font-family:var(--fd);font-size:13px;color:var(--c3);letter-spacing:2px}
+.shop-cats{display:flex;gap:4px;width:100%;overflow-x:auto;padding-bottom:2px}
+.shop-cats::-webkit-scrollbar{display:none}
+.scat{flex-shrink:0;padding:5px 11px;background:var(--s);border:1px solid var(--dim);border-radius:20px;font-size:8px;letter-spacing:2px;color:var(--dim);cursor:pointer;transition:all .15s}
+.scat:hover{border-color:var(--c2);color:var(--txt)}
+.scat.on{background:rgba(0,229,255,.08);border-color:var(--c2);color:var(--c2)}
+.shop-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%}
+.si{background:var(--s);border:1px solid var(--dim);border-radius:6px;padding:11px;cursor:pointer;transition:all .15s;text-align:center;position:relative;overflow:hidden}
+.si::after{content:'';position:absolute;inset:0;opacity:0;background:linear-gradient(135deg,rgba(0,229,255,.06),transparent);transition:opacity .15s}
+.si:hover:not(.owned):not(.broke)::after{opacity:1}
+.si:hover:not(.owned):not(.broke){border-color:var(--c2)}
+.si.owned{border-color:rgba(0,255,136,.25);cursor:default}
+.si.equipped{border-color:var(--c3);box-shadow:0 0 10px rgba(255,229,0,.1)}
+.si.broke{opacity:.3;cursor:not-allowed}
+.si.rare{border-color:rgba(124,58,237,.3)}
+.si.rare:hover:not(.owned):not(.broke){border-color:var(--c4)}
+.si.legendary{border-color:rgba(255,45,107,.3)}
+.si.legendary:hover:not(.owned):not(.broke){border-color:var(--c1)}
+.si-ico{font-size:26px;margin-bottom:4px}
+.si-rar{font-size:7px;letter-spacing:2px;margin-bottom:2px}
+.si-rar.common{color:#666}
+.si-rar.rare{color:var(--c4)}
+.si-rar.legendary{color:var(--c1)}
+.si-name{font-family:var(--fd);font-size:8px;letter-spacing:2px;color:var(--txt);margin-bottom:3px}
+.si-desc{font-size:8px;color:var(--dim);line-height:1.5;margin-bottom:5px}
+.si-cost{font-family:var(--fd);font-size:10px;color:var(--c3)}
+.si-badge{position:absolute;top:5px;right:5px;font-size:7px;padding:2px 4px;border-radius:2px;letter-spacing:1px}
+.si-badge.own{background:rgba(0,255,136,.12);color:var(--g);border:1px solid rgba(0,255,136,.25)}
+.si-badge.eq{background:rgba(255,229,0,.12);color:var(--c3);border:1px solid rgba(255,229,0,.25)}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,5,.85);backdrop-filter:blur(8px);z-index:60;display:none;align-items:center;justify-content:center}
+.modal-bg.on{display:flex}
+.modal-box{background:var(--panel);border:1px solid var(--dim);border-radius:8px;padding:24px;max-width:280px;width:90%;text-align:center;display:flex;flex-direction:column;gap:12px}
+.mod-ico{font-size:40px}
+.mod-name{font-family:var(--fd);font-size:12px;letter-spacing:3px;color:var(--c2)}
+.mod-desc{font-size:9px;color:var(--dim);line-height:1.7}
+.mod-cost{font-family:var(--fd);font-size:20px;color:var(--c3)}
+.mod-btns{display:flex;gap:8px}
+.mod-btn{flex:1;padding:10px;background:transparent;border:1px solid var(--dim);border-radius:4px;font-family:var(--fm);font-size:9px;letter-spacing:2px;color:var(--dim);cursor:pointer;transition:all .15s}
+.mod-btn.ok{border-color:var(--c2);color:var(--c2)}
+.mod-btn.ok:hover{background:var(--c2);color:var(--bg)}
+.mod-btn.no:hover{border-color:var(--r);color:var(--r)}
+
+/* OVER */
+#s-over{text-align:center}
+.over-title{font-family:var(--fd);font-size:clamp(48px,12vw,80px);color:var(--r);letter-spacing:4px;text-shadow:0 0 40px var(--r);animation:glitch .4s steps(1) 4}
+@keyframes glitch{0%{transform:translate(0)}25%{transform:translate(-4px,2px)}50%{transform:translate(4px,-2px)}75%{transform:translate(-2px,1px)}100%{transform:translate(0)}}
+.over-depth{font-size:10px;color:var(--dim);letter-spacing:4px;margin-top:4px}
+.over-score-big{font-family:var(--fd);font-size:56px;color:var(--c3);text-shadow:0 0 20px var(--c3);letter-spacing:2px}
+.over-coins{font-family:var(--fd);font-size:16px;color:var(--c3);letter-spacing:2px}
+.over-pb{font-size:10px;color:var(--dim)}
+.over-rank{font-size:12px;color:var(--c2);letter-spacing:2px}
+.over-btns{display:flex;gap:10px;margin-top:4px}
+.btn-over{padding:12px 26px;background:transparent;border:2px solid var(--c2);border-radius:4px;font-family:var(--fd);font-size:10px;letter-spacing:3px;color:var(--c2);cursor:pointer;transition:all .15s}
+.btn-over:hover{background:var(--c2);color:var(--bg)}
+.btn-over.sec{border-color:var(--dim);color:var(--dim)}
+.btn-over.sec:hover{background:var(--dim);color:var(--bg)}
+
+/* SETUP INSTRUCTIONS */
+.fb-setup{background:var(--panel);border:1px solid rgba(0,229,255,.1);border-radius:6px;padding:16px;width:100%;max-width:360px;font-size:9px;line-height:2;color:var(--dim)}
+.fb-setup h3{font-family:var(--fd);font-size:10px;color:var(--c2);letter-spacing:3px;margin-bottom:8px}
+.fb-setup .step{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px}
+.fb-setup .num{font-family:var(--fd);font-size:10px;color:var(--c3);flex-shrink:0;width:16px}
+.fb-setup code{color:var(--c2);background:rgba(0,229,255,.08);padding:1px 4px;border-radius:2px;font-size:8px}
+.fb-status-bar{display:flex;align-items:center;gap:8px;font-size:9px;color:var(--dim);letter-spacing:1px}
+.fb-led{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.fb-led.on{background:var(--g);box-shadow:0 0 6px var(--g)}
+.fb-led.err{background:var(--r);box-shadow:0 0 6px var(--r)}
+
+/* ADMIN MODAL */
+#admin-modal .modal-box{border-color:rgba(255,45,107,.3)}
+.admin-input{width:100%;background:var(--bg);border:1px solid var(--dim);border-radius:3px;padding:8px 10px;font-family:var(--fm);font-size:11px;color:var(--c1);text-align:center;outline:none;transition:border-color .15s}
+.admin-input:focus{border-color:var(--c1)}
+.admin-btn{width:100%;padding:9px;background:transparent;border:1px solid;border-radius:3px;font-family:var(--fm);font-size:9px;letter-spacing:2px;cursor:pointer;transition:all .15s;text-transform:uppercase}
+
+/* DIVIDER */
+.div-line{width:60px;height:1px;background:linear-gradient(90deg,transparent,var(--c4),transparent)}
+</style>
+</head>
+<body>
+
+<!-- 3D CANVAS -->
+<canvas id="c"></canvas>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-item"><span class="hud-lbl">Score</span><span class="hud-val" id="h-score">0</span></div>
+  <div class="hud-item"><span class="hud-lbl">Depth</span><span class="hud-val" id="h-depth">0m</span></div>
+  <div class="hud-item"><span class="hud-lbl">Speed</span><span class="hud-val" id="h-speed">1.0x</span></div>
+  <div class="hud-item"><span class="hud-lbl">Shield</span><span class="hud-val" id="h-shield">—</span></div>
+  <div class="hud-item"><span class="hud-lbl">Coins</span><span class="hud-val" id="h-coins" style="color:var(--c3);font-size:14px">⬡ 0</span></div>
+</div>
+
+<!-- LIVE LB -->
+<div id="live-lb">
+  <div class="llb-title">LIVE BOARD</div>
+  <div id="llb-rows"></div>
+</div>
+
+<!-- MOBILE -->
+<div id="mobile-btns">
+  <div class="m-btn" ontouchstart="mv(-1)" ontouchend="mv(0)">◀</div>
+  <div class="m-btn" ontouchstart="dashStart()" ontouchend="dashEnd()">⚡</div>
+  <div class="m-btn" ontouchstart="mv(1)" ontouchend="mv(0)">▶</div>
+</div>
+
+<!-- ══ TITLE SCREEN ══ -->
+<div class="screen on" id="s-title">
+  <div class="game-title">NEON DESCENT</div>
+  <div class="game-sub">fall deeper · survive longer · dominate the board</div>
+  <div class="div-line"></div>
+
+  <input class="tag-input" id="tag" maxlength="12" placeholder="YOUR TAG" spellcheck="false" autocomplete="off">
+  <button class="btn-primary" onclick="startGame()"><span>▼ &nbsp; DESCEND</span></button>
+
+  <div class="controls-hint">
+    <b>A D / ← →</b> to drift &nbsp;·&nbsp; <b>SPACE</b> to dash<br>
+    avoid red rings &nbsp;·&nbsp; hit green rings for coins<br>
+    blue rings slow time &nbsp;·&nbsp; don't touch the walls
+  </div>
+
+  <div class="tabs">
+    <div class="tab on" onclick="tab('lb')">LEADERBOARD</div>
+    <div class="tab" onclick="tab('shop')">SHOP</div>
+    <div class="tab" onclick="tab('setup')">FIREBASE</div>
+  </div>
+
+  <!-- LB TAB -->
+  <div class="tab-panel on" id="tp-lb">
+    <div class="lb-box">
+      <div class="lb-hdr">
+        <div class="lb-dot"></div>
+        <div class="lb-title-txt">GLOBAL TOP 10</div>
+        <div id="lb-status">—</div>
+      </div>
+      <div class="lb-list" id="lb-list"><div class="lb-empty">LOADING...</div></div>
+    </div>
+  </div>
+
+  <!-- SHOP TAB -->
+  <div class="tab-panel" id="tp-shop">
+    <div class="shop-bar">
+      <button class="shop-back" onclick="tab('lb')">← BACK</button>
+      <div class="shop-wallet">⬡ <span id="sw-coins">0</span></div>
+    </div>
+    <div class="shop-cats" id="shop-cats"></div>
+    <div class="shop-grid" id="shop-grid"></div>
+  </div>
+
+  <!-- FIREBASE SETUP TAB -->
+  <div class="tab-panel" id="tp-setup">
+    <div class="shop-bar">
+      <button class="shop-back" onclick="tab('lb')">← BACK</button>
+      <div class="fb-status-bar"><div class="fb-led" id="fb-led"></div><span id="fb-txt">Not connected</span></div>
+    </div>
+    <div class="fb-setup">
+      <h3>FIREBASE SETUP</h3>
+      <div class="step"><div class="num">1</div><div>Go to <code>console.firebase.google.com</code> and create a new project</div></div>
+      <div class="step"><div class="num">2</div><div>Click <code>Build → Realtime Database → Create Database</code> and choose a region. Select <code>Test mode</code> to allow read/write.</div></div>
+      <div class="step"><div class="num">3</div><div>In Project Settings → Your Apps, click the web icon <code>&lt;/&gt;</code>, register an app, and copy the config values.</div></div>
+      <div class="step"><div class="num">4</div><div>Open this HTML file in a text editor. Find the line <code>const FB_CONFIG = {</code> near the top of the script and paste your <code>apiKey</code>, <code>databaseURL</code>, and <code>projectId</code>.</div></div>
+      <div class="step"><div class="num">5</div><div>The <code>databaseURL</code> looks like <code>https://yourapp-default-rtdb.firebaseio.com</code> — it only appears after you create the Realtime Database.</div></div>
+      <div class="step"><div class="num">6</div><div>Save and upload to GitHub Pages. Done — all players share the same global leaderboard automatically.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ GAME OVER ══ -->
+<div class="screen" id="s-over">
+  <div class="over-title">DEAD</div>
+  <div class="over-depth" id="o-depth">0 METRES</div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+    <div style="font-size:9px;color:var(--dim);letter-spacing:4px">FINAL SCORE</div>
+    <div class="over-score-big" id="o-score">0</div>
+    <div class="over-coins" id="o-coins">+0 COINS</div>
+    <div class="over-pb" id="o-pb">PB: 0</div>
+  </div>
+  <div class="over-rank" id="o-rank"></div>
+  <div class="over-btns">
+    <button class="btn-over" onclick="restartGame()">↺ RETRY</button>
+    <button class="btn-over sec" onclick="goTitle()">⌂ MENU</button>
+  </div>
+</div>
+
+<!-- SHOP MODAL -->
+<div class="modal-bg" id="buy-modal">
+  <div class="modal-box">
+    <div class="mod-ico" id="m-ico"></div>
+    <div class="mod-name" id="m-name"></div>
+    <div class="mod-desc" id="m-desc"></div>
+    <div class="mod-cost" id="m-cost"></div>
+    <div class="mod-btns">
+      <button class="mod-btn no" onclick="closeBuyModal()">CANCEL</button>
+      <button class="mod-btn ok" id="m-buy" onclick="confirmBuy()">BUY</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN MODAL -->
+<div class="modal-bg" id="admin-modal">
+  <div class="modal-box" id="admin-modal-box">
+    <div class="mod-ico">⬡</div>
+    <div class="mod-name" style="color:var(--c1)">ADMIN</div>
+    <input class="admin-input" id="admin-pw" type="password" placeholder="password" onkeydown="if(event.key==='Enter')chkAdmin()">
+    <div id="admin-status" style="font-size:9px;color:var(--dim);letter-spacing:1px"></div>
+    <div id="admin-actions" style="display:none;flex-direction:column;gap:6px">
+      <button class="admin-btn" style="border-color:var(--r);color:var(--r)" onclick="adminClear()">CLEAR LEADERBOARD</button>
+      <div id="admin-log" style="font-size:8px;color:var(--dim);text-align:center"></div>
+    </div>
+    <button class="mod-btn no" onclick="closeAdmin()">CLOSE</button>
+  </div>
+</div>
+
+<!-- THREE.JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+'use strict';
+
+// ════════════════════════════════════════
+//  FIREBASE CONFIG — paste yours here
+// ════════════════════════════════════════
+const FB_CONFIG = {
+  apiKey:      'AIzaSyArgUNCqTu95o8ki_P5rgRILzt-pbr7fvE',
+  databaseURL: 'https://voidrunner-b3c4f-default-rtdb.firebaseio.com/',
+  projectId:   'voidrunner-b3c4f',
+  authDomain:  'voidrunner-b3c4f.firebaseapp.com',
+};
+const DB_PATH = 'neondescent/board'; // separate from void runner
+
+// ════════════════════════════════════════
+//  SHOP DATA
+// ════════════════════════════════════════
+const ITEMS = [
+  // UPGRADES (very expensive)
+  {id:'shield1',   ico:'🛡', name:'NANO SHIELD',   desc:'Absorbs 1 wall hit per run',           cost:500,  cat:'upgrades', type:'passive', rarity:'common'},
+  {id:'shield2',   ico:'🔮', name:'PHASE SHIELD',  desc:'Absorbs 2 hits. Rare glow effect',      cost:2000, cat:'upgrades', type:'passive', rarity:'rare'},
+  {id:'magnet',    ico:'🧲', name:'COIN MAGNET',   desc:'Pulls coins from 80px radius',          cost:800,  cat:'upgrades', type:'passive', rarity:'common'},
+  {id:'slowfall',  ico:'🪂', name:'SLOW FALL',     desc:'Fall speed 15% slower permanently',     cost:1200, cat:'upgrades', type:'passive', rarity:'common'},
+  {id:'dashplus',  ico:'⚡', name:'HYPER DASH',    desc:'Dash distance doubled, 50% faster regen',cost:1500,cat:'upgrades', type:'passive', rarity:'rare'},
+  {id:'coinmult',  ico:'💰', name:'GOLD CORE',     desc:'All coins worth 3x',                    cost:3000, cat:'upgrades', type:'passive', rarity:'rare'},
+  {id:'timecrystal',ico:'💎',name:'TIME CRYSTAL',  desc:'Slow-time rings last 2x longer',        cost:2500, cat:'upgrades', type:'passive', rarity:'rare'},
+  {id:'immortal',  ico:'☠', name:'DEATH PACT',    desc:'Continue once per run at 1hp on death', cost:5000, cat:'upgrades', type:'passive', rarity:'legendary'},
+  {id:'scorex',    ico:'✖', name:'SCORE SURGE',   desc:'Score multiplier ×1.5 all game',        cost:4000, cat:'upgrades', type:'passive', rarity:'legendary'},
+  // TRAILS
+  {id:'trail_def', ico:'🔵', name:'DEFAULT',       desc:'Standard blue trail',                   cost:0,    cat:'trails',   type:'trail',   rarity:'common'},
+  {id:'trail_fire',ico:'🔥', name:'INFERNO',       desc:'Orange fire trail',                     cost:600,  cat:'trails',   type:'trail',   rarity:'common'},
+  {id:'trail_ice', ico:'❄', name:'GLACIAL',       desc:'White ice crystal trail',               cost:800,  cat:'trails',   type:'trail',   rarity:'common'},
+  {id:'trail_gold',ico:'⭐', name:'GOLD DUST',     desc:'Gold sparkling trail',                  cost:1500, cat:'trails',   type:'trail',   rarity:'rare'},
+  {id:'trail_void',ico:'🌀', name:'VOID RIFT',     desc:'Black hole particle trail',             cost:3000, cat:'trails',   type:'trail',   rarity:'legendary'},
+  // SHIPS
+  {id:'ship_def',  ico:'🔷', name:'PRISM',         desc:'Default blue gem ship',                 cost:0,    cat:'ships',    type:'ship',    rarity:'common'},
+  {id:'ship_red',  ico:'🔴', name:'CRIMSON',       desc:'Aggressive red fighter',                cost:700,  cat:'ships',    type:'ship',    rarity:'common'},
+  {id:'ship_gold', ico:'🟡', name:'AURELIUS',      desc:'Gold plated hull',                      cost:2000, cat:'ships',    type:'ship',    rarity:'rare'},
+  {id:'ship_dark', ico:'⬛', name:'OBSIDIAN',      desc:'Near-invisible black stealth hull',     cost:4000, cat:'ships',    type:'ship',    rarity:'legendary'},
+  // EFFECTS
+  {id:'fx_ring',   ico:'💥', name:'RING EXPLODE',  desc:'Rings burst into particles on hit',     cost:400,  cat:'effects',  type:'effect',  rarity:'common'},
+  {id:'fx_shake',  ico:'📳', name:'SHOCKWAVE',     desc:'Screen shake on near misses',           cost:600,  cat:'effects',  type:'effect',  rarity:'common'},
+  {id:'fx_chroma', ico:'🌈', name:'CHROMATIC',     desc:'RGB color shift on ship at high speed', cost:2500, cat:'effects',  type:'effect',  rarity:'legendary'},
+];
+
+const CATS = ['upgrades','trails','ships','effects'];
+let activeCat = 'upgrades';
+let pendingItem = null;
+
+function getCoins(){return parseInt(localStorage.getItem('nd_coins')||'0');}
+function addCoins(n){localStorage.setItem('nd_coins',getCoins()+n);}
+function spendCoins(n){const c=getCoins();if(c<n)return false;localStorage.setItem('nd_coins',c-n);return true;}
+function getOwned(){try{return JSON.parse(localStorage.getItem('nd_owned')||'[]');}catch{return[];}}
+function isOwned(id){return getOwned().includes(id)||false;}
+function ownIt(id){const o=getOwned();if(!o.includes(id)){o.push(id);localStorage.setItem('nd_owned',JSON.stringify(o));}}
+function getEquip(){try{return JSON.parse(localStorage.getItem('nd_equip')||'{}');}catch{return {};}}
+function equip(type,id){const e=getEquip();e[type]=id;localStorage.setItem('nd_equip',JSON.stringify(e));}
+function getEq(type){return getEquip()[type]||null;}
+function has(id){return isOwned(id);}
+
+function buildShopCats(){
+  const el=document.getElementById('shop-cats');
+  el.innerHTML=CATS.map(c=>`<div class="scat ${activeCat===c?'on':''}" onclick="setShopCat('${c}')">${c.toUpperCase()}</div>`).join('');
+}
+function setShopCat(c){activeCat=c;buildShop();}
+
+function buildShop(){
+  document.getElementById('sw-coins').textContent=getCoins();
+  buildShopCats();
+  const grid=document.getElementById('shop-grid');
+  const coins=getCoins();
+  grid.innerHTML='';
+  ITEMS.filter(i=>i.cat===activeCat).forEach(item=>{
+    const owned=isOwned(item.id)||item.cost===0;
+    const eqType=item.type==='passive'?null:item.type;
+    const equipped=eqType&&getEq(eqType)===item.id;
+    const broke=!owned&&coins<item.cost;
+    const rc=item.rarity==='legendary'?' legendary':item.rarity==='rare'?' rare':'';
+    const d=document.createElement('div');
+    d.className='si'+rc+(owned?' owned':'')+(equipped?' equipped':'')+(broke?' broke':'');
+    d.innerHTML=`
+      <div class="si-ico">${item.ico}</div>
+      <div class="si-rar ${item.rarity}">${item.rarity.toUpperCase()}</div>
+      <div class="si-name">${item.name}</div>
+      <div class="si-desc">${item.desc}</div>
+      <div class="si-cost">${owned&&item.cost>0?'':item.cost>0?'⬡ '+item.cost.toLocaleString():'FREE'}</div>
+      ${owned&&eqType?`<div class="si-badge ${equipped?'eq':'own'}">${equipped?'ON':'EQUIP'}</div>`:''}
+      ${owned&&!eqType&&item.cost>0?`<div class="si-badge own">ACTIVE</div>`:''}
+    `;
+    if(!owned&&item.cost>0) d.onclick=()=>openBuyModal(item);
+    else if(owned&&eqType) d.onclick=()=>{equip(eqType,item.id);buildShop();};
+    else if(item.cost===0&&eqType){if(!isOwned(item.id))ownIt(item.id);d.onclick=()=>{equip(eqType,item.id);buildShop();};}
+    grid.appendChild(d);
+  });
+}
+
+function openBuyModal(item){
+  pendingItem=item;
+  document.getElementById('m-ico').textContent=item.ico;
+  document.getElementById('m-name').textContent=item.name;
+  document.getElementById('m-desc').textContent=item.desc;
+  document.getElementById('m-cost').textContent='⬡ '+item.cost.toLocaleString();
+  const ok=getCoins()>=item.cost;
+  const btn=document.getElementById('m-buy');
+  btn.textContent=ok?'CONFIRM BUY':'INSUFFICIENT COINS';
+  btn.style.pointerEvents=ok?'auto':'none';
+  btn.style.opacity=ok?'1':'.4';
+  document.getElementById('buy-modal').classList.add('on');
+}
+function closeBuyModal(){pendingItem=null;document.getElementById('buy-modal').classList.remove('on');}
+function confirmBuy(){
+  if(!pendingItem)return;
+  const it=pendingItem;
+  if(spendCoins(it.cost)){
+    ownIt(it.id);
+    if(it.type!=='passive')equip(it.type,it.id);
+    closeBuyModal();buildShop();
+  }
+}
+document.getElementById('buy-modal').addEventListener('click',e=>{if(e.target===document.getElementById('buy-modal'))closeBuyModal();});
+
+// TAB SWITCHING
+function tab(t){
+  ['lb','shop','setup'].forEach((x,i)=>{
+    document.querySelectorAll('.tab')[i].classList.toggle('on',x===t);
+    document.getElementById('tp-'+x).classList.toggle('on',x===t);
+  });
+  if(t==='shop')buildShop();
+  if(t==='lb')loadLB();
+}
+
+// ════════════════════════════════════════
+//  FIREBASE
+// ════════════════════════════════════════
+let db=null, fbReady=false, lbListener=null;
+
+function initFB(){
+  try{
+    const app=firebase.apps.length?firebase.apps[0]:firebase.initializeApp(FB_CONFIG);
+    db=firebase.database(app);
+    fbReady=true;
+    document.getElementById('fb-led').className='fb-led on';
+    document.getElementById('fb-txt').textContent='Connected';
+    startLBListener();
+  }catch(e){
+    console.error('FB init:',e);
+    document.getElementById('fb-led').className='fb-led err';
+    document.getElementById('fb-txt').textContent='Error: '+e.message;
+  }
+}
+
+function startLBListener(){
+  if(!fbReady||lbListener)return;
+  document.getElementById('lb-status').textContent='LIVE ●';
+  lbListener=db.ref(DB_PATH).on('value',snap=>{
+    const rows=[];
+    snap.forEach(c=>{const v=c.val();if(v&&v.name&&v.score!=null)rows.push(v);});
+    rows.sort((a,b)=>b.score-a.score);
+    renderLB(rows);
+  },err=>{
+    document.getElementById('lb-status').textContent='RULES ERROR';
+    document.getElementById('lb-list').innerHTML=`<div class="lb-empty" style="color:var(--r);font-size:8px">PERMISSION DENIED<br><span style="color:var(--dim)">Set Firebase rules to true</span></div>`;
+  });
+}
+
+async function submitScore(name,score){
+  if(!fbReady)return;
+  try{
+    const key=name.replace(/[^A-Z0-9]/g,'_');
+    const ref=db.ref(DB_PATH+'/'+key);
+    const snap=await ref.once('value');
+    const cur=snap.val();
+    if(!cur||score>cur.score)await ref.set({name,score,ts:Date.now()});
+  }catch(e){console.error('Submit:',e);}
+}
+
+async function loadLB(){
+  if(!fbReady){document.getElementById('lb-status').textContent='CONNECTING...';return;}
+  try{
+    const snap=await db.ref(DB_PATH).once('value');
+    const rows=[];
+    snap.forEach(c=>{const v=c.val();if(v&&v.name&&v.score!=null)rows.push(v);});
+    rows.sort((a,b)=>b.score-a.score);
+    renderLB(rows);
+  }catch(e){document.getElementById('lb-status').textContent='ERROR';}
+}
+
+function renderLB(rows){
+  const list=document.getElementById('lb-list');
+  const me=(document.getElementById('tag').value.trim()||playerName||'').toUpperCase();
+  if(!rows.length){list.innerHTML='<div class="lb-empty">NO SCORES YET</div>';return;}
+  const icons=['⬡','◇','△'];
+  list.innerHTML=rows.slice(0,10).map((e,i)=>{
+    const rc=i===0?'r1':i===1?'r2':i===2?'r3':'rn';
+    return `<div class="lb-row">
+      <div class="lb-rank ${rc}">${icons[i]||i+1}</div>
+      <div class="lb-name ${e.name===me?'me':''}">${e.name}</div>
+      <div class="lb-score-txt">${Number(e.score).toLocaleString()}</div>
+    </div>`;
+  }).join('');
+}
+
+async function refreshLiveLB(){
+  if(!fbReady)return;
+  try{
+    const snap=await db.ref(DB_PATH).once('value');
+    const rows=[];
+    snap.forEach(c=>{const v=c.val();if(v&&v.name&&v.score!=null)rows.push(v);});
+    const me=playerName;
+    const idx=rows.findIndex(r=>r.name===me);
+    if(idx>=0){if(score>rows[idx].score)rows[idx].score=score;}
+    else rows.push({name:me,score});
+    rows.sort((a,b)=>b.score-a.score);
+    document.getElementById('llb-rows').innerHTML=rows.slice(0,7).map((e,i)=>`
+      <div class="llb-row">
+        <div class="llb-r">${i+1}</div>
+        <div class="llb-n ${e.name===me?'me':''}">${e.name.slice(0,8)}</div>
+        <div class="llb-s">${Number(e.score).toLocaleString()}</div>
+      </div>`).join('');
+  }catch(e){}
+}
+
+// ADMIN
+const ADMIN_PW='admin';
+let isAdmin=false;
+// Triple-click game title to open admin
+let titleClicks=0;
+document.querySelector('.game-title').addEventListener('click',()=>{
+  titleClicks++;
+  if(titleClicks>=3){titleClicks=0;document.getElementById('admin-modal').classList.add('on');}
+  setTimeout(()=>{titleClicks=0;},900);
+});
+function chkAdmin(){
+  const pw=document.getElementById('admin-pw').value;
+  const st=document.getElementById('admin-status');
+  if(pw===ADMIN_PW){isAdmin=true;st.textContent='ACCESS GRANTED';st.style.color='var(--c1)';document.getElementById('admin-actions').style.display='flex';}
+  else{st.textContent='WRONG';st.style.color='var(--r)';}
+}
+document.getElementById('admin-pw').addEventListener('input',chkAdmin);
+async function adminClear(){
+  if(!isAdmin)return;
+  if(!confirm('Clear global leaderboard?'))return;
+  try{await db.ref(DB_PATH).remove();document.getElementById('admin-log').textContent='Cleared.';}
+  catch(e){document.getElementById('admin-log').textContent='Error: '+e.message;}
+}
+function closeAdmin(){
+  document.getElementById('admin-modal').classList.remove('on');
+  document.getElementById('admin-pw').value='';
+  document.getElementById('admin-status').textContent='';
+  document.getElementById('admin-actions').style.display='none';
+  isAdmin=false;
+}
+
+// ════════════════════════════════════════
+//  THREE.JS GAME ENGINE
+// ════════════════════════════════════════
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x000005,0.018);
+
+const camera=new THREE.PerspectiveCamera(70,1,0.1,200);
+
+// RESIZE
+function resize(){
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+}
+resize();
+window.addEventListener('resize',resize);
+
+// ── MATERIALS ──
+const matShip=new THREE.MeshStandardMaterial({color:0x00e5ff,emissive:0x004466,metalness:0.8,roughness:0.2});
+const matWall=new THREE.MeshStandardMaterial({color:0x0a0a1a,emissive:0x050518,metalness:0.9,roughness:0.1,side:THREE.BackSide});
+const matRingDanger=new THREE.MeshStandardMaterial({color:0xff2244,emissive:0x880011,metalness:0.6,roughness:0.3,transparent:true,opacity:0.92});
+const matRingCoin=new THREE.MeshStandardMaterial({color:0x00ff88,emissive:0x003322,metalness:0.7,roughness:0.2,transparent:true,opacity:0.88});
+const matRingSlow=new THREE.MeshStandardMaterial({color:0x00e5ff,emissive:0x002244,metalness:0.7,roughness:0.2,transparent:true,opacity:0.85});
+const matGlow=new THREE.MeshBasicMaterial({color:0x00e5ff,transparent:true,opacity:0.15,side:THREE.BackSide});
+
+// ── TUNNEL ──
+const TUNNEL_R=6;
+const TUNNEL_SEG=32;
+const tunnelGeo=new THREE.CylinderGeometry(TUNNEL_R,TUNNEL_R,300,TUNNEL_SEG,1,true);
+const tunnel=new THREE.Mesh(tunnelGeo,matWall);
+tunnel.position.y=-150;
+scene.add(tunnel);
+
+// Outer glow tube
+const glowGeo=new THREE.CylinderGeometry(TUNNEL_R+0.5,TUNNEL_R+0.5,300,TUNNEL_SEG,1,true);
+const glow=new THREE.Mesh(glowGeo,matGlow);
+glow.position.y=-150;
+scene.add(glow);
+
+// Edge strips (hexagonal feel)
+for(let i=0;i<6;i++){
+  const a=(i/6)*Math.PI*2;
+  const stripGeo=new THREE.BoxGeometry(0.06,300,0.06);
+  const stripMat=new THREE.MeshBasicMaterial({color:0x00e5ff,transparent:true,opacity:0.12});
+  const strip=new THREE.Mesh(stripGeo,stripMat);
+  strip.position.set(Math.cos(a)*(TUNNEL_R-0.1),-150,Math.sin(a)*(TUNNEL_R-0.1));
+  scene.add(strip);
+}
+
+// ── LIGHTING ──
+const ambientLight=new THREE.AmbientLight(0x080820,2);
+scene.add(ambientLight);
+const pointLight1=new THREE.PointLight(0x00e5ff,3,20);
+pointLight1.position.set(0,2,0);
+scene.add(pointLight1);
+const pointLight2=new THREE.PointLight(0xff2244,2,15);
+scene.add(pointLight2);
+
+// ── SHIP ──
+const shipGroup=new THREE.Group();
+// Body
+const bodyGeo=new THREE.ConeGeometry(0.28,0.7,6);
+const body=new THREE.Mesh(bodyGeo,matShip);
+body.rotation.x=Math.PI/2; // point forward (down)
+shipGroup.add(body);
+// Wings
+const wingGeo=new THREE.BoxGeometry(0.9,0.06,0.3);
+const wingMat=new THREE.MeshStandardMaterial({color:0x004466,emissive:0x001122,metalness:0.9,roughness:0.1});
+const wings=new THREE.Mesh(wingGeo,wingMat);
+wings.position.z=0.1;
+shipGroup.add(wings);
+// Glow core
+const coreGeo=new THREE.SphereGeometry(0.1,8,8);
+const coreMat=new THREE.MeshBasicMaterial({color:0x00e5ff});
+const core=new THREE.Mesh(coreGeo,coreMat);
+shipGroup.add(core);
+// Engine glow light
+const shipLight=new THREE.PointLight(0x00e5ff,2,3);
+shipGroup.add(shipLight);
+scene.add(shipGroup);
+
+// ── RINGS ──
+const RING_TYPES=['danger','coin','slow'];
+let rings=[];
+let particles=[];
+
+function makeRing(y,type){
+  // Outer ring torus
+  const outerR=TUNNEL_R*0.78;
+  const gap=1.2+Math.random()*0.8; // gap half-width
+  const gapAngle=Math.random()*Math.PI*2;
+  // Build ring as arc segments (skip gap)
+  const group=new THREE.Group();
+  const mat=type==='danger'?matRingDanger:type==='coin'?matRingCoin:matRingSlow;
+  const segs=24;
+  const gapFrac=gap/(Math.PI*outerR*2)*(Math.PI*2)*2; // in radians
+  for(let i=0;i<segs;i++){
+    const a0=(i/segs)*Math.PI*2+gapAngle;
+    const a1=((i+1)/segs)*Math.PI*2+gapAngle;
+    const mid=(a0+a1)/2;
+    // Skip segments in the gap
+    const diffFrom=Math.abs(((mid-gapAngle+Math.PI)%(Math.PI*2))-Math.PI);
+    if(diffFrom<gapFrac/2)continue;
+    const x0=Math.cos(a0)*outerR, z0=Math.sin(a0)*outerR;
+    const x1=Math.cos(a1)*outerR, z1=Math.sin(a1)*outerR;
+    const segGeo=new THREE.BoxGeometry(
+      Math.sqrt((x1-x0)**2+(z1-z0)**2)+0.02, 0.14, 0.22
+    );
+    const seg=new THREE.Mesh(segGeo,mat);
+    seg.position.set((x0+x1)/2,0,(z0+z1)/2);
+    seg.rotation.y=-Math.atan2(z1-z0,x1-x0);
+    group.add(seg);
+  }
+  // Glow ring (thin)
+  const glowTGeo=new THREE.TorusGeometry(outerR,0.04,8,48);
+  const glowTMat=new THREE.MeshBasicMaterial({
+    color:type==='danger'?0xff2244:type==='coin'?0x00ff88:0x00e5ff,
+    transparent:true,opacity:0.35
+  });
+  const glowT=new THREE.Mesh(glowTGeo,glowTMat);
+  glowT.rotation.x=Math.PI/2;
+  group.add(glowT);
+
+  // Inner point light
+  const col=type==='danger'?0xff2244:type==='coin'?0x00ff88:0x00e5ff;
+  const rLight=new THREE.PointLight(col,1.5,6);
+  group.add(rLight);
+
+  group.position.set(0,y,0);
+  group.userData={type,gapAngle,gap,outerR,passed:false,y};
+  scene.add(group);
+  rings.push(group);
+  return group;
+}
+
+// ── PARTICLES ──
+function spawnParticles(pos,color,count){
+  for(let i=0;i<count;i++){
+    const geo=new THREE.SphereGeometry(0.04+Math.random()*0.06,4,4);
+    const mat=new THREE.MeshBasicMaterial({color,transparent:true,opacity:1});
+    const m=new THREE.Mesh(geo,mat);
+    m.position.copy(pos);
+    const v=new THREE.Vector3((Math.random()-.5)*4,(Math.random()-.5)*4,(Math.random()-.5)*4);
+    m.userData={v,life:1,decay:0.03+Math.random()*0.04};
+    scene.add(m);
+    particles.push(m);
+  }
+}
+
+function updateParticles(){
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.position.addScaledVector(p.userData.v,0.016);
+    p.userData.v.y+=0.08;
+    p.userData.life-=p.userData.decay;
+    p.material.opacity=p.userData.life;
+    if(p.userData.life<=0){scene.remove(p);particles.splice(i,1);}
+  }
+}
+
+// ── TRAIL ──
+let trailPoints=[];
+const MAX_TRAIL=40;
+let trailLine=null;
+
+function updateTrail(){
+  trailPoints.unshift(shipGroup.position.clone());
+  if(trailPoints.length>MAX_TRAIL)trailPoints.pop();
+  if(trailLine){scene.remove(trailLine);trailLine.geometry.dispose();}
+  if(trailPoints.length<2)return;
+  const col=getTrailCol();
+  const geo=new THREE.BufferGeometry().setFromPoints(trailPoints);
+  const mat=new THREE.LineBasicMaterial({color:col,transparent:true,opacity:0.5,linewidth:2});
+  trailLine=new THREE.Line(geo,mat);
+  scene.add(trailLine);
+}
+
+function getTrailCol(){
+  const t=getEq('trail');
+  if(t==='trail_fire')return 0xff6600;
+  if(t==='trail_ice')return 0xaaddff;
+  if(t==='trail_gold')return 0xffd700;
+  if(t==='trail_void')return 0x220033;
+  return 0x00e5ff;
+}
+
+function getShipCol(){
+  const s=getEq('ship');
+  if(s==='ship_red')return{color:0xff2244,emissive:0x440011};
+  if(s==='ship_gold')return{color:0xffd700,emissive:0x443300};
+  if(s==='ship_dark')return{color:0x111122,emissive:0x000011};
+  return{color:0x00e5ff,emissive:0x004466};
+}
+
+// ── GAME STATE ──
+let gameRunning=false, animId=null, playerName='';
+let score=0,depth=0,fallSpeed=0,sessionCoins=0,frame=0;
+let shipX=0,shipXV=0;
+let dashCharge=100,dashActive=false,dashDrain=false;
+let lives=1,shieldHits=0,deathPactUsed=false;
+let slowActive=false,slowTimer=0;
+let lbTimer=0;
+const keys={left:false,right:false,dash:false};
+let mobileInput=0;
+
+// Tunnel scroll offset for visual continuity
+let tunnelY=0;
+
+function initGame(){
+  // Lives
+  lives=1;
+  if(has('shield1'))shieldHits=Math.max(shieldHits||0,1);
+  if(has('shield2'))shieldHits=Math.max(shieldHits||0,2);
+  deathPactUsed=false;
+
+  score=0; depth=0; fallSpeed=0.04; sessionCoins=0; frame=0;
+  shipX=0; shipXV=0; dashCharge=100; dashActive=false; dashDrain=false;
+  slowActive=false; slowTimer=0; lbTimer=0;
+  trailPoints=[];
+
+  // Update ship material
+  const sc=getShipCol();
+  matShip.color.setHex(sc.color);
+  matShip.emissive.setHex(sc.emissive);
+
+  // Clear rings
+  rings.forEach(r=>scene.remove(r));
+  rings=[];
+  particles.forEach(p=>scene.remove(p));
+  particles=[];
+  if(trailLine){scene.remove(trailLine);trailLine=null;}
+
+  // Seed rings ahead
+  for(let i=0;i<12;i++) makeRing(-8-i*8, RING_TYPES[Math.floor(Math.random()*3)]);
+
+  shipGroup.position.set(0,0,0);
+  camera.position.set(0,3.5,5);
+  camera.lookAt(0,0,0);
+  pointLight2.position.set(0,0,0);
+}
+
+function getSpeed(){
+  let s=has('slowfall')?fallSpeed*0.85:fallSpeed;
+  if(slowActive)s*=0.4;
+  if(dashActive)s*=0.35; // dash sideways, still fall
+  return s;
+}
+
+function update(){
+  frame++;
+  // Accelerate fall
+  fallSpeed=Math.min(0.22, 0.04+frame*0.000055);
+  const spd=getSpeed();
+  depth+=spd;
+  score=Math.floor(depth*18*(has('scorex')?1.5:1)+sessionCoins*(has('coinmult')?3:1)*50);
+
+  // Slow timer
+  if(slowActive){slowTimer--;if(slowTimer<=0)slowActive=false;}
+
+  // Dash
+  const maxDash=has('dashplus')?200:100;
+  if(dashDrain&&dashCharge>0){dashCharge-=has('dashplus')?1.5:2.5;if(dashCharge<=0){dashCharge=0;dashActive=false;dashDrain=false;}}
+  else if(!dashDrain&&dashCharge<maxDash){dashCharge=Math.min(maxDash,dashCharge+(has('dashplus')?0.6:0.4));}
+
+  // Ship lateral
+  const input=keys.left?-1:keys.right?1:mobileInput;
+  const accel=dashActive?1.2:0.55;
+  shipXV+=input*accel;
+  shipXV*=0.8;
+  shipXV=Math.max(-6,Math.min(6,shipXV));
+  shipX+=shipXV*0.016*60;
+
+  // Clamp to tunnel
+  const maxX=TUNNEL_R-0.5;
+  const shipZ=shipGroup.position.z;
+  const dist=Math.sqrt(shipX*shipX+shipZ*shipZ);
+  if(dist>maxX){
+    // Wall hit
+    const norm=new THREE.Vector2(shipX,shipZ).normalize();
+    shipX=norm.x*maxX;
+    // bounce
+    shipXV*=-0.4;
+    if(!hitShip())return;
+  }
+
+  shipGroup.position.x=shipX;
+
+  // Camera follows, slightly behind and above
+  const camY=shipGroup.position.y+3.5;
+  camera.position.x+=(shipX*0.3-camera.position.x)*0.12;
+  camera.position.y+=(camY-camera.position.y)*0.1;
+  camera.position.z=5;
+  camera.lookAt(shipX*0.2, shipGroup.position.y, 0);
+
+  // Move rings toward ship (ship falling = rings rising)
+  for(let i=rings.length-1;i>=0;i--){
+    const r=rings[i];
+    r.position.y+=spd*60*0.016;
+    r.rotation.y+=0.008*(slowActive?0.3:1);
+
+    // Check collision
+    if(!r.userData.passed&&r.position.y>-0.8&&r.position.y<0.8){
+      // Ring is at ship level
+      const sx=shipX, sz=shipGroup.position.z;
+      const dist2D=Math.sqrt(sx*sx+sz*sz);
+      const gapA=r.userData.gapAngle;
+      const shipAngle=Math.atan2(sz,sx);
+      const angDiff=Math.abs(((shipAngle-gapA+Math.PI*3)%(Math.PI*2))-Math.PI);
+      const gapHalf=r.userData.gap/(r.userData.outerR)*2;
+      const inGap=dist2D<r.userData.outerR-0.35||angDiff<gapHalf;
+
+      if(!inGap&&dist2D>r.userData.outerR-0.5){
+        // Hit ring
+        r.userData.passed=true;
+        if(r.userData.type==='danger'){
+          if(has('fx_ring'))spawnParticles(r.position,0xff2244,20);
+          if(!hitShip())return;
+        }
+      } else if(inGap||dist2D<r.userData.outerR-0.5){
+        if(!r.userData.passed){
+          r.userData.passed=true;
+          if(r.userData.type==='coin'){
+            const coinVal=has('coinmult')?3:1;
+            sessionCoins+=coinVal;
+            spawnParticles(r.position,0x00ff88,8);
+          } else if(r.userData.type==='slow'){
+            slowActive=true;
+            slowTimer=has('timecrystal')?360:180;
+            spawnParticles(r.position,0x00e5ff,10);
+          }
+        }
+      }
+    }
+
+    // Magnet: pull coins
+    if(has('magnet')&&r.userData.type==='coin'&&!r.userData.passed){
+      const dy=Math.abs(r.position.y);
+      if(dy<4&&Math.sqrt(shipX*shipX+shipGroup.position.z*shipGroup.position.z)<r.userData.outerR*0.95){
+        r.userData.passed=true;
+        const coinVal=has('coinmult')?3:1;
+        sessionCoins+=coinVal;
+        spawnParticles(r.position,0x00ff88,6);
+      }
+    }
+
+    // Remove old rings above camera
+    if(r.position.y>10){scene.remove(r);rings.splice(i,1);}
+  }
+
+  // Spawn new rings ahead
+  const lowestRing=rings.reduce((m,r)=>Math.min(m,r.position.y),-5);
+  if(lowestRing>-60){
+    const y=lowestRing-7-Math.random()*4;
+    const type=RING_TYPES[Math.floor(Math.random()*3)];
+    makeRing(y,type);
+  }
+
+  // Lights follow ship
+  pointLight1.position.set(shipX,shipGroup.position.y+1,1);
+  pointLight2.position.set(shipX*-0.5,shipGroup.position.y-2,-1);
+
+  // Trail
+  updateTrail();
+  updateParticles();
+
+  // Chromatic effect at high speed
+  if(has('fx_chroma')&&fallSpeed>0.15){
+    const hue=(frame*3)%360;
+    matShip.color.setHSL(hue/360,1,0.6);
+  }
+
+  // HUD
+  document.getElementById('h-score').textContent=score.toLocaleString();
+  document.getElementById('h-depth').textContent=Math.floor(depth*10)+'m';
+  const se=document.getElementById('h-speed');
+  se.textContent=(fallSpeed/0.04).toFixed(1)+'x';
+  se.className='hud-val'+(fallSpeed>0.16?' danger':fallSpeed>0.12?' hot':'');
+  const sh=document.getElementById('h-shield');
+  sh.textContent=shieldHits>0?'♦'.repeat(shieldHits):'—';
+  sh.className='hud-val'+(shieldHits<=0?' danger':'');
+  document.getElementById('h-coins').textContent='⬡ '+sessionCoins;
+
+  // Live LB refresh
+  lbTimer++;if(lbTimer>=150){lbTimer=0;refreshLiveLB();}
+}
+
+let hitOnCooldown=false;
+function hitShip(){
+  if(hitOnCooldown)return true;
+  hitOnCooldown=true;
+  setTimeout(()=>{hitOnCooldown=false;},400);
+
+  if(shieldHits>0){
+    shieldHits--;
+    spawnParticles(shipGroup.position,0x00e5ff,20);
+    if(has('fx_shake'))shakeCamera();
+    return true;
+  }
+  if(has('immortal')&&!deathPactUsed){
+    deathPactUsed=true;
+    shieldHits=0;
+    spawnParticles(shipGroup.position,0xffd700,30);
+    return true;
+  }
+  // Die
+  spawnParticles(shipGroup.position,0xff2244,30);
+  endGame();
+  return false;
+}
+
+function shakeCamera(){
+  let t=0;
+  const orig=camera.position.clone();
+  const iv=setInterval(()=>{
+    t++;
+    camera.position.x=orig.x+(Math.random()-.5)*0.3;
+    camera.position.y=orig.y+(Math.random()-.5)*0.2;
+    if(t>8){clearInterval(iv);camera.position.copy(orig);}
+  },30);
+}
+
+function dashStart(){if(dashCharge>20){dashActive=true;dashDrain=true;}}
+function dashEnd(){dashDrain=false;dashActive=false;}
+
+function gameLoop(){
+  if(!gameRunning)return;
+  update();
+  renderer.render(scene,camera);
+  animId=requestAnimationFrame(gameLoop);
+}
+
+// ── SCREEN MANAGEMENT ──
+function showScreen(id){
+  ['s-title','s-over'].forEach(s=>document.getElementById(s).classList.remove('on'));
+  document.getElementById('hud').classList.remove('on');
+  document.getElementById('live-lb').classList.remove('on');
+  document.getElementById('mobile-btns').style.display='none';
+  if(id==='game'){
+    document.getElementById('hud').classList.add('on');
+    document.getElementById('live-lb').classList.add('on');
+    document.getElementById('mobile-btns').style.display='flex';
+  } else {
+    document.getElementById(id).classList.add('on');
+  }
+}
+
+function startGame(){
+  playerName=(document.getElementById('tag').value.trim()||'ANON').toUpperCase().slice(0,12);
+  document.getElementById('tag').value=playerName;
+  initGame();
+  showScreen('game');
+  gameRunning=true;
+  if(animId)cancelAnimationFrame(animId);
+  gameLoop();
+}
+
+function restartGame(){
+  initGame();
+  showScreen('game');
+  gameRunning=true;
+  if(animId)cancelAnimationFrame(animId);
+  gameLoop();
+}
+
+function goTitle(){
+  gameRunning=false;if(animId)cancelAnimationFrame(animId);
+  showScreen('s-title');loadLB();buildShop();
+}
+
+async function endGame(){
+  gameRunning=false;if(animId)cancelAnimationFrame(animId);
+  addCoins(sessionCoins);
+  const pbk='nd_pb_'+playerName;
+  const pb=parseInt(localStorage.getItem(pbk)||'0');
+  const newPB=Math.max(pb,score);
+  localStorage.setItem(pbk,newPB);
+  document.getElementById('o-score').textContent=score.toLocaleString();
+  document.getElementById('o-depth').textContent=Math.floor(depth*10)+' METRES';
+  document.getElementById('o-coins').textContent='+'+sessionCoins+' COINS (Total: '+getCoins().toLocaleString()+')';
+  document.getElementById('o-pb').textContent='PB: '+newPB.toLocaleString();
+  document.getElementById('o-rank').textContent='';
+  showScreen('s-over');
+  await submitScore(playerName,score);
+  try{
+    const snap=await db.ref(DB_PATH).once('value');
+    const all=[];snap.forEach(c=>{const v=c.val();if(v)all.push(v);});
+    all.sort((a,b)=>b.score-a.score);
+    const rank=all.findIndex(e=>e.name===playerName)+1;
+    const rm=document.getElementById('o-rank');
+    if(rank===1)rm.textContent='⬡ #1 IN THE WORLD';
+    else if(rank<=3)rm.textContent='TOP '+rank+' — ELITE';
+    else if(rank<=10)rm.textContent='RANK #'+rank+' GLOBALLY';
+    else rm.textContent='RANK #'+rank;
+  }catch(e){}
+}
+
+// ── INPUT ──
+window.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A')keys.left=true;
+  if(e.key==='ArrowRight'||e.key==='d'||e.key==='D')keys.right=true;
+  if(e.key===' '){e.preventDefault();dashStart();}
+  if(e.key==='Enter'&&document.getElementById('s-title').classList.contains('on'))startGame();
+});
+window.addEventListener('keyup',e=>{
+  if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A')keys.left=false;
+  if(e.key==='ArrowRight'||e.key==='d'||e.key==='D')keys.right=false;
+  if(e.key===' ')dashEnd();
+});
+function mv(d){mobileInput=d;}
+document.getElementById('tag').addEventListener('keydown',e=>{if(e.key==='Enter')startGame();});
+
+// ── BOOT ──
+// Initial idle render loop (shows tunnel on title screen)
+let idleId=null;
+function idleLoop(){
+  if(gameRunning){cancelAnimationFrame(idleId);return;}
+  // Slowly drift camera through tunnel for title screen ambience
+  const t=Date.now()*0.0004;
+  camera.position.set(Math.sin(t)*1.5,Math.cos(t*0.7)*0.5+1,5);
+  camera.lookAt(0,0,0);
+  tunnel.position.y-=0.02;
+  if(tunnel.position.y<-300)tunnel.position.y=0;
+  renderer.render(scene,camera);
+  idleId=requestAnimationFrame(idleLoop);
+}
+
+initFB();
+loadLB();
+idleLoop();
+</script>
+</body>
+</html>
